@@ -1,0 +1,120 @@
+Pythonでデータ加工をやってみた。毛利
+
+レシート明細データフレーム（df_receipt）に対し、1件あたりの売上金額（amount）が高い順にランクを付与し、先頭10件を抽出せよ。項目は顧客ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合は同一順位を付与するものとする。
+
+[ ]
+df_tmp = pd.concat([df_receipt[['customer_id', 'amount']] 
+                     ,df_receipt['amount'].rank(method='min', ascending=False)], axis=1)
+df_tmp.columns = ['customer_id', 'amount', 'ranking']
+df_tmp.sort_values('ranking', ascending=True).head(10)
+
+
+
+
+
+平均、分散、標準偏差について、データ加工をやってみた。
+
+P-レシート明細データフレーム（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、降順でTOP5を表示せよ。
+
+df_receipt.groupby('store_cd').agg({'amount':'mean'}).reset_index().sort_values('amount', ascending=False).head(5)
+
+
+
+
+
+レシート明細データフレーム（df_receipt）に対し、
+店舗コード（store_cd）ごとに売上金額（amount）の中央値を計算し、
+降順でTOP5を表示せよ。
+
+df_receipt.groupby('store_cd').agg({'amount':'median'}).reset_index().sort_values('amount', ascending=False).head(5)
+
+
+
+
+
+レシート明細データフレーム（df_receipt）に対し、
+店舗コード（store_cd）ごとに
+商品コード（product_cd）の最頻値を求めよ。
+
+df_receipt.groupby('store_cd').product_cd.apply(lambda x: x.mode()).reset_index()
+
+
+
+
+
+
+レシート明細データフレーム（df_receipt）に対し、
+店舗コード（store_cd）ごとに
+売上金額（amount）の標本分散を計算し、
+降順でTOP5を表示せよ。
+
+df_receipt.groupby('store_cd').amount.var(ddof=0).reset_index().sort_values('amount', ascending=False).head(5)
+
+
+
+
+
+
+レシート明細データフレーム（df_receipt）に対し、
+店舗コード（store_cd）ごとに
+売上金額（amount）の標本標準偏差を計算し、
+降順でTOP5を表示せよ。
+
+df_receipt.groupby('store_cd').amount.std(ddof=0).reset_index().sort_values('amount', ascending=False).head(5)
+
+
+
+
+
+
+顧客データフレーム（df_customer）とレシート明細データフレーム（df_receipt）から、
+各顧客ごとの売上金額合計を求めよ。
+ただし、買い物の実績がない顧客については売上金額を0として表示させる。
+また、顧客は性別コード（gender_cd）が女性（1）であるものを対象とし、非会員（顧客IDが'Z'から始まるもの）は除外すること。
+なお、結果は10件だけ表示させれば良い。
+
+df_amount_sum = df_receipt.groupby('customer_id').amount.sum().reset_index()
+df_tmp = df_customer.query('gender_cd == "1" and not customer_id.str.startswith("Z")', engine='python')
+pd.merge(df_tmp['customer_id'], df_amount_sum, how='left', on='customer_id').fillna(0).head(10)
+
+
+
+
+
+
+レシート明細データフレーム（df_receipt）の売上エポック秒（sales_epoch）を日付型（timestamp型）に変換し、
+"月"だけ取り出してレシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに抽出せよ。
+なお、"月"は0埋め2桁で取り出すこと。データは10件を抽出すれば良い。
+
+# dt.monthでも月を取得できるが、ここでは0埋め２桁で取り出すためstrftimeを利用している
+pd.concat([df_receipt[['receipt_no', 'receipt_sub_no']],
+           pd.to_datetime(df_receipt['sales_epoch'], unit='s').dt.strftime('%m')],axis=1).head(10)
+
+
+
+
+
+
+レシート明細データフレーム（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、
+合計した売上金額を平均0、標準偏差1に標準化して顧客ID、売上金額合計とともに表示せよ。
+標準化に使用する標準偏差は、不偏標準偏差と標本標準偏差のどちらでも良いものとする。
+ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+結果は10件表示させれば良い。
+
+# skleanのpreprocessing.scaleを利用するため、標本標準偏差で計算されている
+df_sales_amount = df_receipt.query('not customer_id.str.startswith("Z")', engine='python'). \
+    groupby('customer_id').agg({'amount':'sum'}).reset_index()
+df_sales_amount['amount_ss'] = preprocessing.scale(df_sales_amount['amount'])
+df_sales_amount.head(10)
+
+
+
+
+
+
+
+
+
+
+
+
